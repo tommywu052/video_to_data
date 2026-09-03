@@ -314,3 +314,18 @@ sys.exit(3 if 'sm_120' not in torch.cuda.get_arch_list() else 0)" \
     || "$P" -m pip install --no-cache-dir --force-reinstall \
         torch==2.8.0 torchvision==0.23.0 \
         --index-url https://download.pytorch.org/whl/cu128
+
+# The numpy pin above does not survive its own build: later installs in this
+# same Dockerfile move numpy to 2.x, and scipy, scikit-learn and scikit-sparse
+# were all reinstalled against 1.26.4. Every extension that carries a Cython
+# type check against the numpy it compiled with then fails at import --
+# sksparse.cholmod, open3d and sklearn all raise
+#
+#   ValueError: numpy.dtype size changed ... Expected 96 from C header, got 88
+#
+# which takes out the whole BundleSDF stage. Nothing complains during the
+# build. --no-deps is what keeps this repair from becoming the same kind of
+# problem it fixes.
+RUN P="$(command -v python || command -v python3)"; \
+    "$P" -c "import numpy, sys; sys.exit(0 if numpy.__version__ == '1.26.4' else 3)" \
+    || "$P" -m pip install --no-cache-dir --no-deps --force-reinstall numpy==1.26.4
