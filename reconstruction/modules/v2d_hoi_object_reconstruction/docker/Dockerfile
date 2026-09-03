@@ -1,4 +1,5 @@
-FROM nvcr.io/nvidia/cuda:12.4.1-devel-ubuntu22.04
+FROM nvcr.io/nvidia/cuda:12.8.1-devel-ubuntu22.04
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 
 ARG CMAKE_VERSION_MAJOR=3
 ARG CMAKE_VERSION_MINOR=25
