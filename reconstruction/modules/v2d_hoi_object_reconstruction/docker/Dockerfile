@@ -74,7 +74,7 @@ RUN cd / && \
     mkdir build && cd build && cmake .. && make install && \
     cd / && rm -rf eigen-${EIGEN_VERSION_MAJOR}.${EIGEN_VERSION_MINOR}.${EIGEN_VERSION_PATCH}*
 
-RUN pip3 install -U torch==2.6.0 torchvision==0.21.0
+RUN pip3 install -U torch==2.8.0 torchvision==0.23.0 --index-url https://download.pytorch.org/whl/cu128
 
 # Install OpenCV with CUDA
 RUN cd / && \
@@ -230,8 +230,8 @@ RUN pip3 install --no-cache-dir -r /workspace/3d-object-reconstruction/src/requi
 RUN pip3 install -U pip && pip3 install --no-cache-dir \
     scikit-learn scikit-image --force-reinstall \
     && pip3 install --no-cache-dir --ignore-installed open3d \
-    && pip3 install --no-cache-dir kaolin==0.17.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124.html \
-    && pip3 install --no-cache-dir --no-index pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py310_cu121_pyt241/download.html \
+    && pip3 install --no-cache-dir kaolin==0.18.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.8.0_cu128.html \
+    && FORCE_CUDA=1 pip3 install --no-cache-dir --no-build-isolation "git+https://github.com/facebookresearch/pytorch3d.git@V0.7.8" \
     && pip3 install --no-cache-dir numpy==1.26.4 scipy joblib scikit-learn scikit-image --force-reinstall \
     && pip3 install --no-cache-dir pyrender \
     && pip3 install --no-cache-dir scikit-sparse==0.4.12 \

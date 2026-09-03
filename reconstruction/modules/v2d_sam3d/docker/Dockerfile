@@ -21,7 +21,7 @@ RUN apt-get update && apt-get install -y \
 
 # Heavy deps that need special install procedures
 RUN pip3 install gsplat
-RUN pip install kaolin==0.18.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124.html
+RUN pip install kaolin==0.18.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.8.0_cu128.html
 RUN pip3 install "git+https://github.com/facebookresearch/pytorch3d.git"
 RUN pip3 install git+https://github.com/microsoft/MoGe.git@a8c37341bc0325ca99b9d57981cc3bb2bd3e255b#egg=moge
 
