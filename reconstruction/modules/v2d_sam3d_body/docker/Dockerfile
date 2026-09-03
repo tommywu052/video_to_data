@@ -21,7 +21,7 @@ RUN pip install pytorch-lightning pyrender opencv-python yacs scikit-image einop
 
 # Pytorch3D (requires CUDA build; no GPU visible during docker build so we
 # must specify architectures explicitly)
-RUN FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0" \
+RUN FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" \
     pip install "git+https://github.com/facebookresearch/pytorch3d.git@v0.7.9"
 
 RUN pip install py-soma-x

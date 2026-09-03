@@ -38,7 +38,7 @@ RUN pip install lightning
 RUN pip install xatlas pyvista pymeshfix igraph imageio
 RUN git clone https://github.com/NVlabs/nvdiffrast /tmp/nvdiffrast && \
     pip install setuptools wheel ninja && \
-    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0" pip install /tmp/nvdiffrast --no-build-isolation && \
+    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" pip install /tmp/nvdiffrast --no-build-isolation && \
     rm -rf /tmp/nvdiffrast
 
 # Required by sam-3d-objects on A100/H100/H200: inference_pipeline.set_attention_backend()

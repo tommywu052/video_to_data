@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Build native CUDA extensions for the same arches as the rest of the repo.
-ENV TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0"
+ENV TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0"
 ENV FORCE_CUDA=1
 
 RUN pip install --no-cache-dir \

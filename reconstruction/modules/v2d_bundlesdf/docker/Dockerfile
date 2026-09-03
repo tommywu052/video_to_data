@@ -108,7 +108,7 @@ RUN cd / && \
         -DCMAKE_CXX_STANDARD=17 \
         -DCMAKE_CXX_STANDARD_REQUIRED=ON \
         -DOPENCV_CUDA_OPTIONS_opencv_test_cudev=-std=c++17 \
-        -DCUDA_ARCH_BIN="7.0 7.5 8.0 8.6 9.0" \
+        -DCUDA_ARCH_BIN="7.0 7.5 8.0 8.6 9.0 12.0" \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DINSTALL_PKGCONFIG=ON \
@@ -251,7 +251,7 @@ RUN git init /BundleSDF && \
     test "$(git -C /BundleSDF rev-parse HEAD)" = "${BUNDLESDF_COMMIT}"
 RUN cp -r /BundleSDF/mycuda /customize_cuda && \
     cd /customize_cuda && \
-    TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;9.0" FORCE_CUDA=1 pip install . --no-build-isolation
+    TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;9.0;12.0" FORCE_CUDA=1 pip install . --no-build-isolation
 
 # Build and install BundleTrack
 RUN cp -r /BundleSDF/BundleTrack /tmp/BundleTrack && \

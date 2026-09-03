@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN git clone https://github.com/IDEA-Research/GroundingDINO.git /tmp/GroundingDINO && \
     cd /tmp/GroundingDINO && \
-    FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0" \
+    FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0;12.0" \
     pip install --no-build-isolation . && \
     rm -rf /tmp/GroundingDINO
 

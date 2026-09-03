@@ -55,12 +55,12 @@ RUN pip install \
 
 RUN pip install kaolin==0.18.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124.html
 
-RUN TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0" pip3 install "git+https://github.com/facebookresearch/pytorch3d.git"
+RUN TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" pip3 install "git+https://github.com/facebookresearch/pytorch3d.git"
 
 RUN git clone https://github.com/NVlabs/nvdiffrast /workspace/third_party/nvdiffrast && \
     cd /workspace/third_party/nvdiffrast && \
     pip install setuptools wheel ninja && \
-    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0" pip install . --no-build-isolation
+    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" pip install . --no-build-isolation
 
 ENV OPENCV_IO_ENABLE_OPENEXR=1
 
@@ -85,7 +85,7 @@ RUN cd /workspace/v2d_foundation_pose/lib/FoundationPose/mycpp \
     && mkdir -p build && cd build && cmake .. -DPYTHON_EXECUTABLE=$(which python) && make -j11
 
 RUN cd /workspace/v2d_foundation_pose/lib/FoundationPose/bundlesdf/mycuda && \
-    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0" pip install -e .
+    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" pip install -e .
 
 COPY . /workspace
 

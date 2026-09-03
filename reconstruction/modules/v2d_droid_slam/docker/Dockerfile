@@ -32,10 +32,10 @@ RUN pip install --no-cache-dir torch-scatter -f https://data.pyg.org/whl/torch-2
 RUN git clone --recursive https://github.com/princeton-vl/DROID-SLAM.git /opt/droid-slam
 
 RUN cd /opt/droid-slam/thirdparty/lietorch && \
-    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0" pip install --no-build-isolation -e .
+    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" pip install --no-build-isolation -e .
 
 RUN cd /opt/droid-slam && \
-    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0" pip install --no-build-isolation -e .
+    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" pip install --no-build-isolation -e .
 
 ENV PYTHONPATH=/opt/droid-slam:/opt/droid-slam/droid_slam:${PYTHONPATH}
 
