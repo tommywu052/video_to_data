@@ -1,4 +1,5 @@
 FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+ENV MAX_JOBS=8 MAKEFLAGS=-j8
 ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
