@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN git clone https://github.com/IDEA-Research/GroundingDINO.git /tmp/GroundingDINO && \
     cd /tmp/GroundingDINO && \
+    sed -i 's/.type().is_cuda()/.is_cuda()/g; s/value.type(), "ms_deform_attn/value.scalar_type(), "ms_deform_attn/g' groundingdino/models/GroundingDINO/csrc/MsDeformAttn/ms_deform_attn_cuda.cu && \
     FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;8.9;9.0;12.0" \
     pip install --no-build-isolation . && \
     rm -rf /tmp/GroundingDINO
