@@ -24,3 +24,14 @@ COPY v2d_mv_postprocess/lib /workspace/v2d_mv_postprocess/lib
 RUN pip install -e /workspace/v2d_mv_postprocess/lib
 
 ENV PYOPENGL_PLATFORM=egl
+
+# Verify the torch in the finished image can actually run on the architectures
+# this image was built for, and repair it if some dependency replaced it.
+RUN P="$(command -v python || command -v python3)"; \
+    "$P" -c "import importlib.util as u, sys; \
+sys.exit(0) if u.find_spec('torch') is None else None; \
+import torch; \
+sys.exit(3 if 'sm_120' not in torch.cuda.get_arch_list() else 0)" \
+    || "$P" -m pip install --no-cache-dir --force-reinstall \
+        torch==2.8.0 torchvision==0.23.0 \
+        --index-url https://download.pytorch.org/whl/cu128
