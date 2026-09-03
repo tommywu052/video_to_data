@@ -1,4 +1,6 @@
-FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+ENV MAX_JOBS=8 MAKEFLAGS=-j8
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
@@ -9,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Build native CUDA extensions for the same arches as the rest of the repo.
-ENV TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0"
+ENV TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0"
 ENV FORCE_CUDA=1
 
 RUN pip install --no-cache-dir \
@@ -40,3 +42,14 @@ RUN python -c "import gsplat; from gsplat.rendering import rasterization; \
                from manotorch.manolayer import ManoLayer; \
                from v2d.gsplat_refinement.lib import refine; \
                print('gsplat_refinement imports OK')"
+
+# Verify the torch in the finished image can actually run on the architectures
+# this image was built for, and repair it if some dependency replaced it.
+RUN P="$(command -v python || command -v python3)"; \
+    "$P" -c "import importlib.util as u, sys; \
+sys.exit(0) if u.find_spec('torch') is None else None; \
+import torch; \
+sys.exit(3 if 'sm_120' not in torch.cuda.get_arch_list() else 0)" \
+    || "$P" -m pip install --no-cache-dir --force-reinstall \
+        torch==2.8.0 torchvision==0.23.0 \
+        --index-url https://download.pytorch.org/whl/cu128

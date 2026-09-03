@@ -1,4 +1,6 @@
-FROM nvcr.io/nvidia/cuda:12.4.1-devel-ubuntu22.04
+FROM nvcr.io/nvidia/cuda:12.8.1-devel-ubuntu22.04
+ENV MAX_JOBS=8 MAKEFLAGS=-j8
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 
 ARG CMAKE_VERSION_MAJOR=3
 ARG CMAKE_VERSION_MINOR=25
@@ -73,7 +75,7 @@ RUN cd / && \
     mkdir build && cd build && cmake .. && make install && \
     cd / && rm -rf eigen-${EIGEN_VERSION_MAJOR}.${EIGEN_VERSION_MINOR}.${EIGEN_VERSION_PATCH}*
 
-RUN pip3 install -U torch==2.6.0 torchvision==0.21.0
+RUN pip3 install -U torch==2.8.0 torchvision==0.23.0 --index-url https://download.pytorch.org/whl/cu128
 
 # Install OpenCV with CUDA
 RUN cd / && \
@@ -107,7 +109,7 @@ RUN cd / && \
         -DCMAKE_CXX_STANDARD=17 \
         -DCMAKE_CXX_STANDARD_REQUIRED=ON \
         -DOPENCV_CUDA_OPTIONS_opencv_test_cudev=-std=c++17 \
-        -DCUDA_ARCH_BIN="7.0 7.5 8.0 8.6 9.0" \
+        -DCUDA_ARCH_BIN="7.0 7.5 8.0 8.6 9.0 12.0" \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DINSTALL_PKGCONFIG=ON \
@@ -229,8 +231,8 @@ RUN pip3 install --no-cache-dir -r /workspace/3d-object-reconstruction/src/requi
 RUN pip3 install -U pip && pip3 install --no-cache-dir \
     scikit-learn scikit-image --force-reinstall \
     && pip3 install --no-cache-dir --ignore-installed open3d \
-    && pip3 install --no-cache-dir kaolin==0.17.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124.html \
-    && pip3 install --no-cache-dir --no-index pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py310_cu121_pyt241/download.html \
+    && pip3 install --no-cache-dir kaolin==0.18.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.8.0_cu128.html \
+    && FORCE_CUDA=1 pip3 install --no-cache-dir --no-build-isolation "git+https://github.com/facebookresearch/pytorch3d.git@V0.7.8" \
     && pip3 install --no-cache-dir numpy==1.26.4 scipy joblib scikit-learn scikit-image --force-reinstall \
     && pip3 install --no-cache-dir pyrender \
     && pip3 install --no-cache-dir scikit-sparse==0.4.12 \
@@ -250,7 +252,7 @@ RUN git init /BundleSDF && \
     test "$(git -C /BundleSDF rev-parse HEAD)" = "${BUNDLESDF_COMMIT}"
 RUN cp -r /BundleSDF/mycuda /customize_cuda && \
     cd /customize_cuda && \
-    TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;9.0" FORCE_CUDA=1 pip install . --no-build-isolation
+    TORCH_CUDA_ARCH_LIST="7.0;7.5;8.0;8.6;9.0;12.0" FORCE_CUDA=1 pip install . --no-build-isolation
 
 # Build and install BundleTrack
 RUN cp -r /BundleSDF/BundleTrack /tmp/BundleTrack && \
@@ -301,3 +303,29 @@ COPY v2d_bundlesdf/lib /workspace/v2d_bundlesdf/lib
 RUN pip install -e /workspace/v2d_bundlesdf/lib
 
 ENV PYTHONPATH=/workspace:$PYTHONPATH
+
+# Verify the torch in the finished image can actually run on the architectures
+# this image was built for, and repair it if some dependency replaced it.
+RUN P="$(command -v python || command -v python3)"; \
+    "$P" -c "import importlib.util as u, sys; \
+sys.exit(0) if u.find_spec('torch') is None else None; \
+import torch; \
+sys.exit(3 if 'sm_120' not in torch.cuda.get_arch_list() else 0)" \
+    || "$P" -m pip install --no-cache-dir --force-reinstall \
+        torch==2.8.0 torchvision==0.23.0 \
+        --index-url https://download.pytorch.org/whl/cu128
+
+# The numpy pin above does not survive its own build: later installs in this
+# same Dockerfile move numpy to 2.x, and scipy, scikit-learn and scikit-sparse
+# were all reinstalled against 1.26.4. Every extension that carries a Cython
+# type check against the numpy it compiled with then fails at import --
+# sksparse.cholmod, open3d and sklearn all raise
+#
+#   ValueError: numpy.dtype size changed ... Expected 96 from C header, got 88
+#
+# which takes out the whole BundleSDF stage. Nothing complains during the
+# build. --no-deps is what keeps this repair from becoming the same kind of
+# problem it fixes.
+RUN P="$(command -v python || command -v python3)"; \
+    "$P" -c "import numpy, sys; sys.exit(0 if numpy.__version__ == '1.26.4' else 3)" \
+    || "$P" -m pip install --no-cache-dir --no-deps --force-reinstall numpy==1.26.4

@@ -1,4 +1,6 @@
-FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+ENV MAX_JOBS=8 MAKEFLAGS=-j8
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
@@ -52,14 +54,14 @@ RUN pip install \
     kornia \
     pyrender
 
-RUN pip install kaolin==0.18.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124.html
+RUN pip install kaolin==0.18.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.8.0_cu128.html
 
-RUN TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0" pip3 install "git+https://github.com/facebookresearch/pytorch3d.git"
+RUN TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" pip3 install "git+https://github.com/facebookresearch/pytorch3d.git"
 
 RUN git clone https://github.com/NVlabs/nvdiffrast /workspace/third_party/nvdiffrast && \
     cd /workspace/third_party/nvdiffrast && \
     pip install setuptools wheel ninja && \
-    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0" pip install . --no-build-isolation
+    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" pip install . --no-build-isolation
 
 ENV OPENCV_IO_ENABLE_OPENEXR=1
 
@@ -84,10 +86,21 @@ RUN cd /workspace/v2d_foundation_pose/lib/FoundationPose/mycpp \
     && mkdir -p build && cd build && cmake .. -DPYTHON_EXECUTABLE=$(which python) && make -j11
 
 RUN cd /workspace/v2d_foundation_pose/lib/FoundationPose/bundlesdf/mycuda && \
-    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0" pip install -e .
+    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" pip install -e .
 
 COPY . /workspace
 
 RUN pip install -e "/workspace/v2d_common[io]" \
     -e "/workspace/v2d_mv[math]" \
     -e /workspace/v2d_mesh/lib -e /workspace/v2d_foundation_pose/lib
+
+# Verify the torch in the finished image can actually run on the architectures
+# this image was built for, and repair it if some dependency replaced it.
+RUN P="$(command -v python || command -v python3)"; \
+    "$P" -c "import importlib.util as u, sys; \
+sys.exit(0) if u.find_spec('torch') is None else None; \
+import torch; \
+sys.exit(3 if 'sm_120' not in torch.cuda.get_arch_list() else 0)" \
+    || "$P" -m pip install --no-cache-dir --force-reinstall \
+        torch==2.8.0 torchvision==0.23.0 \
+        --index-url https://download.pytorch.org/whl/cu128

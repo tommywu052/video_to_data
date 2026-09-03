@@ -1,4 +1,7 @@
-FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+ENV MAX_JOBS=8 MAKEFLAGS=-j8
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
+ENV TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0"
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYOPENGL_PLATFORM=egl
 WORKDIR /app
@@ -32,3 +35,29 @@ RUN pip install -e /workspace/v2d_common \
 
 # Sanity-check at build time so a broken install fails the build, not the run.
 RUN python -c "from wilor_mini.pipelines.wilor_hand_pose3d_estimation_pipeline import WiLorHandPose3dEstimationPipeline; print('wilor_mini import OK')"
+
+# Verify the torch in the finished image can actually run on the architectures
+# this image was built for, and repair it if some dependency replaced it.
+RUN P="$(command -v python || command -v python3)"; \
+    "$P" -c "import importlib.util as u, sys; \
+sys.exit(0) if u.find_spec('torch') is None else None; \
+import torch; \
+sys.exit(3 if 'sm_120' not in torch.cuda.get_arch_list() else 0)" \
+    || "$P" -m pip install --no-cache-dir --force-reinstall \
+        torch==2.8.0 torchvision==0.23.0 \
+        --index-url https://download.pytorch.org/whl/cu128
+
+# torch 2.6 changed the default of torch.load to weights_only=True. WiLoR's
+# hand detector is an ultralytics YOLO pose checkpoint, and ultralytics 8.1.34
+# calls torch.load without passing the argument, so loading it on this base
+# raises
+#
+#   UnpicklingError: Weights only load failed ...
+#   Unsupported global: GLOBAL ultralytics.nn.tasks.PoseModel
+#
+# Restoring the previous default is narrower than upgrading ultralytics, whose
+# newer releases carry their own torch preference, and narrower than
+# enumerating safe globals, which needs extending for every class a checkpoint
+# happens to reference. The scope is this image, and the only checkpoints it
+# loads are the ones its own run_download_weights fetches.
+ENV TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1

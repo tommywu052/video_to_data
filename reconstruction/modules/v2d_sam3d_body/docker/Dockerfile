@@ -1,4 +1,6 @@
-FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+ENV MAX_JOBS=8 MAKEFLAGS=-j8
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
@@ -20,7 +22,7 @@ RUN pip install pytorch-lightning pyrender opencv-python yacs scikit-image einop
 
 # Pytorch3D (requires CUDA build; no GPU visible during docker build so we
 # must specify architectures explicitly)
-RUN FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0" \
+RUN FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" \
     pip install "git+https://github.com/facebookresearch/pytorch3d.git@v0.7.9"
 
 RUN pip install py-soma-x
@@ -39,3 +41,14 @@ RUN pip install -e /workspace/v2d_sam3d_body/lib
 ENV PYTHONPATH=/workspace/v2d_sam3d_body/lib
 ENV PYOPENGL_PLATFORM=egl
 ENV TORCH_HOME=/tmp/torch_cache
+
+# Verify the torch in the finished image can actually run on the architectures
+# this image was built for, and repair it if some dependency replaced it.
+RUN P="$(command -v python || command -v python3)"; \
+    "$P" -c "import importlib.util as u, sys; \
+sys.exit(0) if u.find_spec('torch') is None else None; \
+import torch; \
+sys.exit(3 if 'sm_120' not in torch.cuda.get_arch_list() else 0)" \
+    || "$P" -m pip install --no-cache-dir --force-reinstall \
+        torch==2.8.0 torchvision==0.23.0 \
+        --index-url https://download.pytorch.org/whl/cu128

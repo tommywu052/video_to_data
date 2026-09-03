@@ -1,4 +1,6 @@
-FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel
+FROM pytorch/pytorch:2.8.0-cuda12.8-cudnn9-devel
+ENV MAX_JOBS=8 MAKEFLAGS=-j8
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 ENV DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
@@ -20,7 +22,7 @@ RUN apt-get update && apt-get install -y \
 
 # Heavy deps that need special install procedures
 RUN pip3 install gsplat
-RUN pip install kaolin==0.18.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.5.1_cu124.html
+RUN pip install kaolin==0.18.0 -f https://nvidia-kaolin.s3.us-east-2.amazonaws.com/torch-2.8.0_cu128.html
 RUN pip3 install "git+https://github.com/facebookresearch/pytorch3d.git"
 RUN pip3 install git+https://github.com/microsoft/MoGe.git@a8c37341bc0325ca99b9d57981cc3bb2bd3e255b#egg=moge
 
@@ -37,7 +39,7 @@ RUN pip install lightning
 RUN pip install xatlas pyvista pymeshfix igraph imageio
 RUN git clone https://github.com/NVlabs/nvdiffrast /tmp/nvdiffrast && \
     pip install setuptools wheel ninja && \
-    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0" pip install /tmp/nvdiffrast --no-build-isolation && \
+    TORCH_CUDA_ARCH_LIST="8.0 8.6 8.9 9.0 12.0" pip install /tmp/nvdiffrast --no-build-isolation && \
     rm -rf /tmp/nvdiffrast
 
 # Required by sam-3d-objects on A100/H100/H200: inference_pipeline.set_attention_backend()
@@ -74,3 +76,14 @@ ENV HYDRA_FULL_ERROR=1
 ENV CONDA_PREFIX=/opt/conda
 ENV CUDA_HOME=/usr/local/cuda
 ENV LIDRA_SKIP_INIT=1
+
+# Verify the torch in the finished image can actually run on the architectures
+# this image was built for, and repair it if some dependency replaced it.
+RUN P="$(command -v python || command -v python3)"; \
+    "$P" -c "import importlib.util as u, sys; \
+sys.exit(0) if u.find_spec('torch') is None else None; \
+import torch; \
+sys.exit(3 if 'sm_120' not in torch.cuda.get_arch_list() else 0)" \
+    || "$P" -m pip install --no-cache-dir --force-reinstall \
+        torch==2.8.0 torchvision==0.23.0 \
+        --index-url https://download.pytorch.org/whl/cu128
