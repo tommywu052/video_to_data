@@ -46,3 +46,18 @@ sys.exit(3 if 'sm_120' not in torch.cuda.get_arch_list() else 0)" \
     || "$P" -m pip install --no-cache-dir --force-reinstall \
         torch==2.8.0 torchvision==0.23.0 \
         --index-url https://download.pytorch.org/whl/cu128
+
+# torch 2.6 changed the default of torch.load to weights_only=True. WiLoR's
+# hand detector is an ultralytics YOLO pose checkpoint, and ultralytics 8.1.34
+# calls torch.load without passing the argument, so loading it on this base
+# raises
+#
+#   UnpicklingError: Weights only load failed ...
+#   Unsupported global: GLOBAL ultralytics.nn.tasks.PoseModel
+#
+# Restoring the previous default is narrower than upgrading ultralytics, whose
+# newer releases carry their own torch preference, and narrower than
+# enumerating safe globals, which needs extending for every class a checkpoint
+# happens to reference. The scope is this image, and the only checkpoints it
+# loads are the ones its own run_download_weights fetches.
+ENV TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
