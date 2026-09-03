@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -124,6 +125,32 @@ def query_nvidia_gpus() -> list[GPUInfo]:
     return parse_nvidia_smi_output(result.stdout)
 
 
+def _validated_compute_capabilities() -> frozenset[tuple[int, int]]:
+    """Architectures the operator has validated this image against.
+
+    Read from ``V2D_CUSFM_ALLOWED_SM`` as a comma or space separated list, in
+    either ``120`` or ``12.0`` form. The variable exists because the rejection
+    below is a property of the binaries in the image rather than of the GPU:
+    an image rebuilt on ``tensorrt:25.09-py3`` with ``setup.bash cuda13`` links
+    the CUDA 13 set of pyCuSFM libraries, which do contain sm_120 kernels.
+    Empty or unset means no override, which is the default.
+    """
+    raw = os.environ.get("V2D_CUSFM_ALLOWED_SM", "")
+    out: set[tuple[int, int]] = set()
+    for token in raw.replace(",", " ").split():
+        if "." in token:
+            major, _, minor = token.partition(".")
+        elif len(token) >= 2 and token.isdigit():
+            major, minor = token[:-1], token[-1]
+        else:
+            continue
+        try:
+            out.add((int(major), int(minor)))
+        except ValueError:
+            continue
+    return frozenset(out)
+
+
 def validate_cusfm_gpu_compatibility(
     gpus: Iterable[GPUInfo],
     selected_gpu_ids: Sequence[int] | None = None,
@@ -155,10 +182,12 @@ def validate_cusfm_gpu_compatibility(
             )
         selected = [by_index[gpu_id] for gpu_id in requested_ids]
 
+    validated = _validated_compute_capabilities()
     unsupported = [
         gpu
         for gpu in selected
         if gpu.compute_capability >= _UNSUPPORTED_COMPUTE_CAPABILITY
+        and gpu.compute_capability not in validated
     ]
     if unsupported:
         detected = "\n".join(

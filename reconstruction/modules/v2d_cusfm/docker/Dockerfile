@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y \
 RUN git lfs install && \
     git clone https://github.com/nvidia-isaac/pyCuSFM /pycusfm && \
     cd /pycusfm && \
-    bash setup.bash cuda12 && \
+    bash setup.bash cuda13 && \
     pip install -e .
 
 COPY v2d_cusfm/__init__.py /workspace/v2d_cusfm/__init__.py
